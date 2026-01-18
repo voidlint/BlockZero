@@ -53,6 +53,6 @@ checkpoints/
 *.ckpt
 *.pt
 *.pth
-
+metrics/*.csv
 # ---- Bittensor ----
 .bittensor/
