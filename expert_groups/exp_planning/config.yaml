@@ -1,0 +1,60 @@
+# Expert Group Configuration Template
+#
+# Copy this file to create a config for each expert group:
+#   cp config.template.yaml exp_math/config.yaml
+#   cp config.template.yaml exp_agentic/config.yaml
+#   cp config.template.yaml exp_planning/config.yaml
+#   cp config.template.yaml exp_dummy/config.yaml
+#
+# Then edit each file to set the correct expert_group_id and dataset settings.
+
+data:
+  # Dataset configuration
+  dataset_name: "merged_planning"  # Change based on expert group
+  dataset_class: "expert_groups.exp_planning.dataset:MergedPlanningDataset"  # Format: module.path:ClassName
+  data_dir: null  # Set to specific directory if needed (e.g., "en" for C4)
+
+  # Training parameters
+  batch_size: 512
+  sequence_length: 1024
+  per_device_train_batch_size: 2
+  world_size: 10
+  rank: 1
+  vali_fraction: 0.01  # 1% validation split
+
+# Expert group identification
+expert_group_id: 2  # 0=math, 1=agentic, 2=planning, 99=dummy
+expert_group_name: "exp_planning"  # exp_math, exp_agentic, exp_planning, exp_dummy
+
+# =============================================================================
+# Expert Group Settings Reference
+# =============================================================================
+#
+# exp_math (ID: 0)
+# ----------------
+# dataset_name: "merged_planning"
+# dataset_class: "expert_groups.exp_planning.dataset:MergedPlanningDataset"
+# expert_group_id: 2
+# expert_group_name: "exp_planning"
+#
+# exp_agentic (ID: 1)
+# -------------------
+# dataset_name: "merged_agentic"
+# dataset_class: "expert_groups.exp_agentic.dataset:MergedAgenticDataset"
+# expert_group_id: 1
+# expert_group_name: "exp_agentic"
+#
+# exp_planning (ID: 2)
+# --------------------
+# dataset_name: "merged_planning"
+# dataset_class: "expert_groups.exp_planning.dataset:MergedPlanningDataset"
+# expert_group_id: 2
+# expert_group_name: "exp_planning"
+#
+# exp_dummy (ID: 99)
+# ------------------
+# dataset_name: "allenai/c4"
+# dataset_class: null
+# data_dir: "en"
+# expert_group_id: 99
+# expert_group_name: "exp_dummy"

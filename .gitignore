@@ -1,0 +1,58 @@
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Editors ----
+.vscode/
+.idea/
+*.swp
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- venv ----
+.venv/
+venv/
+env/
+
+# ---- Node ----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.cache/
+.next/
+out/
+
+# ---- Secrets / env ----
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+
+# ---- Logs / experiments / artifacts ----
+logs/
+*.log
+wandb/
+runs/
+outputs/
+checkpoints/
+*.ckpt
+*.pt
+*.pth
+
+# ---- Bittensor ----
+.bittensor/

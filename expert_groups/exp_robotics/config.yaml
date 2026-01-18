@@ -1,0 +1,203 @@
+# Robotics Expert Group Configuration
+# Using Qwen3-VL-30B-A3B-Thinking (Vision-Language MoE)
+#
+# Sophisticated robotics expert covering:
+# - Vision-Based Manipulation & Grasping
+# - Visual Navigation & Path Planning
+# - Control Theory & Dynamics
+# - Computer Vision for Robotics (object detection, pose estimation)
+# - ROS/Sensor Integration
+# - Motion Planning & Kinematics
+# - Embodied AI & Visual Reasoning
+
+model:
+  # Vision-Language Model
+  model_path: "Qwen/Qwen3-VL-30B-A3B-Thinking"
+  model_type: "vision_language_moe"
+
+  # MoE configuration for VL model (VERIFIED FROM HF CONFIG)
+  num_experts: 128  # Qwen3-VL-30B-A3B has 128 experts (not 512!)
+  num_experts_per_tok: 8  # top-8 routing (not top-10!)
+
+  # Vision encoder settings (built into Qwen3-VL)
+  vision_encoder: "siglip"  # DeepStack fusion with interleaved-MRoPE
+  image_size: 384
+  max_images_per_sample: 4  # Support multi-view robotics
+
+data:
+  # Dataset configuration
+  dataset_name: "merged_robotics_vl"
+  dataset_class: "expert_groups.exp_robotics.dataset:MergedRoboticsVisionLanguageDataset"
+  data_dir: null
+
+  # Training parameters
+  batch_size: 256  # Smaller due to vision tokens
+  sequence_length: 2048  # Longer for vision + text
+  per_device_train_batch_size: 1  # Lower due to vision memory
+  world_size: 16  # More GPUs needed for VL
+  rank: 1
+  vali_fraction: 0.01  # 1% validation split
+
+  # Vision-specific settings
+  include_images: true
+  image_augmentation: true  # Random crops, flips for robustness
+  max_image_tokens: 256  # Tokens per image
+
+# Expert group identification
+expert_group_id: 3  # New ID for robotics
+expert_group_name: "exp_robotics"
+
+# Expert pool assignment (out of 128 total experts - CORRECTED!)
+expert_pools:
+  robotics_manipulation: [0, 47]     # 48 experts for manipulation (37.5%)
+  robotics_navigation: [48, 71]      # 24 experts for navigation (18.75%)
+  robotics_perception: [72, 95]      # 24 experts for vision tasks (18.75%)
+  # Keep remaining 32 experts (96-127) for other domains
+
+# Shared expert strategy (Qwen3-VL doesn't have one by default)
+shared_expert_mode: "designated"  # Options: "designated" (pick one expert) or "new_ffn" (add new layer)
+shared_expert_config:
+  # "designated" mode: designate one existing expert as always-on
+  designated_expert_id: 127  # Use last expert as shared expert
+  bias_strength: 10.0  # Add strong logit bias to always include this expert
+
+  # Alternative: "new_ffn" mode would add parallel FFN (harder, requires surgery)
+
+# Training optimization
+training:
+  # Stage A: Router + LoRA warmstart
+  stage_a:
+    learning_rate: 1e-4
+    router_lr: 5e-4  # Higher for router
+    lora_rank: 16
+    lora_alpha: 32
+    warmup_steps: 1000
+    max_steps: 10000
+    freeze_vision_encoder: true
+    freeze_backbone: true
+    train_router: true
+    train_lora: true
+
+  # Stage B: Pool-specific fine-tuning
+  stage_b:
+    learning_rate: 3e-5
+    warmup_steps: 500
+    max_steps: 30000
+    freeze_vision_encoder: false  # Unfreeze vision encoder
+    freeze_non_robotics_experts: true
+    train_robotics_pool_only: true
+
+  # Stage C: Safety & alignment
+  stage_c:
+    learning_rate: 1e-5
+    max_steps: 5000
+    sft_iterations: 2000
+    dpo_iterations: 1000
+    safety_focused: true
+
+  # Regularization
+  weight_decay: 0.01
+  dropout: 0.1
+
+  # MoE-specific
+  load_balance_coef: 0.01  # Prevent expert collapse
+  router_z_loss_coef: 0.001  # Entropy regularization
+  aux_loss_coef: 0.01
+
+# Masked routing configuration
+routing:
+  # Routing strategy: START with soft bias, move to hard mask only if needed
+  enable_masked_routing: true
+  routing_mode: "soft_bias"  # Options: "soft_bias" (recommended) or "hard_mask"
+
+  # Task-based routing pools (CORRECTED for 128 experts)
+  task_to_pool_mapping:
+    "ROBOTICS": [0, 95]       # All robotics experts (96 total)
+    "MANIPULATION": [0, 47]    # Manipulation subset (48 experts)
+    "NAVIGATION": [48, 71]     # Navigation subset (24 experts)
+    "PERCEPTION": [72, 95]     # Perception subset (24 experts)
+
+  # Routing pressure (how strongly to bias toward pools)
+  pool_bias_strength: 5.0   # Start moderate (not 10.0 - too harsh)
+  pool_bias_decay: 0.98      # Gradually relax
+  min_bias_strength: 1.0     # Don't go below 1.0
+
+  # Load balancing: CRITICAL - compute only over allowed pool!
+  compute_load_balance_on_pool_only: true  # Don't push mass into masked experts
+
+# Evaluation metrics
+evaluation:
+  # Vision-language robotics metrics
+  metrics:
+    - visual_grounding_accuracy      # Can model locate objects in images?
+    - grasp_pose_prediction_error    # 6-DOF pose accuracy
+    - tool_call_correctness          # Correct API calls given visual input
+    - navigation_waypoint_accuracy   # Path planning from visual scenes
+    - failure_recovery_rate          # Can handle visual failures?
+    - code_generation_quality        # ROS code with vision integration
+    - kinematics_accuracy            # Still important for control
+    - multi_step_visual_reasoning    # Chain visual observations
+
+  # Vision-specific benchmarks
+  benchmarks:
+    - rt_x_tasks           # Robotics Transformer X embodied tasks
+    - bridge_data_success  # Bridge dataset manipulation success
+    - objectnav_spl        # Object navigation SPL metric
+    - manipulation_iou     # Grasp success rate
+
+# Dataset sources
+dataset_sources:
+  # Vision-language robotics datasets
+  - name: "rt_x"
+    weight: 2.0
+    type: "trajectory"
+    includes_vision: true
+
+  - name: "bridge_data"
+    weight: 2.0
+    type: "manipulation"
+    includes_vision: true
+
+  - name: "language_table"
+    weight: 1.5
+    type: "tabletop"
+    includes_vision: true
+
+  # Synthetic vision-language data
+  - name: "robomimic_generated"
+    weight: 1.0
+    type: "simulation"
+    includes_vision: true
+
+  # Vision-language instruction following
+  - name: "llava_robotics_subset"
+    weight: 1.0
+    type: "vqa"
+    includes_vision: true
+    filter: "robotics_keywords"
+
+  # Code generation (text-only)
+  - name: "ros_github_filtered"
+    weight: 0.8
+    type: "code"
+    includes_vision: false
+
+  # Keep 10% general VL data to prevent catastrophic forgetting
+  - name: "llava_general"
+    weight: 0.1
+    type: "general_vl"
+    includes_vision: true
+
+# Compute requirements
+compute:
+  recommended_gpus: 16  # H100 or A100 80GB
+  estimated_time_stage_a: "2 weeks"
+  estimated_time_stage_b: "3 weeks"
+  estimated_time_stage_c: "1 week"
+  total_cost_estimate: "$20k-30k"  # H100 pricing
+
+  # Memory optimization
+  use_gradient_checkpointing: true
+  use_flash_attention: true
+  mixed_precision: "bf16"
+  zero_stage: 3  # ZeRO-3 for large model
