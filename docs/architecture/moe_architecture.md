@@ -18,8 +18,8 @@ Qwen3-VL-MoE (30B parameters)
     │   ├── Attention (standard)
     │   └── MLP → Sparse MoE Block
     │       ├── Router (selects top-k experts)
-    │       ├── 4 Experts per layer (192 total experts)
-    │       └── 1 Shared Expert (always active)
+    │       └── 4 Experts per layer (192 total experts)
+    │    
     │
     └── Output Head
 ```
@@ -27,7 +27,6 @@ Qwen3-VL-MoE (30B parameters)
 **Key Parameters:**
 - Total experts: `4 experts/layer × 48 layers = 192 experts`
 - Active experts per token: `2` (top-2 routing)
-- Shared expert: Always active (not trainable)
 - Expert groups: `4` (Math, Agentic, Planning, Vision)
 
 ### Expert Group Distribution
@@ -62,9 +61,6 @@ class SparseMoeBlock(nn.Module):
             "3": Qwen3VLMoeTextMLP(config),
         })
         
-        # Shared expert: always active
-        self.shared_expert = Qwen3VLMoeTextMLP(config)
-    
     def forward(self, hidden_states):
         # 1. Router selects top-k experts
         router_logits, routing_weights, selected_experts = self.gate(hidden_states)
@@ -195,22 +191,6 @@ for layer_idx, layer in enumerate(model.language_model.layers):
     for expert_id in assigned_expert_ids:
         # Dequantize → FP16 → trainable
         layer.mlp.experts[expert_id] = create_fp16_expert(...)
-```
-
-**Memory Breakdown (per miner):**
-
-```
-Component                    Memory
-─────────────────────────────────────
-Base model (4-bit frozen)    37 GB
-Trainable experts (FP16)     15 GB
-Gradients (FP32)             30 GB
-Optimizer states (AdamW)     60 GB
-Activations (batch=2)        3 GB
-─────────────────────────────────────
-TOTAL                        145 GB
-
-Hardware: 1x A100 80GB or 2x A6000 48GB
 ```
 
 ### Expert-Specific Loading
