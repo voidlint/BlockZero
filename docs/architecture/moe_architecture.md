@@ -33,12 +33,12 @@ Qwen3-VL-MoE (30B parameters)
 
 Each expert group trains a subset of the 192 total experts:
 
-| Group | ID | Experts per Layer | Total Experts | Specialization |
-|-------|----|--------------------|---------------|----------------|
-| Math | 0 | Experts [0, 1] | 96 (48×2) | Mathematical reasoning |
-| Agentic | 1 | Experts [2, 3] | 96 (48×2) | Tool use, function calls |
-| Planning | 2 | Experts [0, 1] | 96 (48×2) | Multi-step planning |
-| Vision | 3 | Experts [2, 3] | 96 (48×2) | Visual understanding |
+| Group | ID | Total Experts | Specialization |
+|-------|----|---------------|----------------|
+| Math | 0 | 96 (48×2) | Mathematical reasoning |
+| Agentic | 1 | 96 (48×2) | Tool use, function calls |
+| Planning | 2 | 96 (48×2) | Multi-step planning |
+| Vision | 3 | 96 (48×2) | Visual understanding |
 
 **Note:** Expert IDs are remapped per group (`my_expert_id` → `org_expert_id`)
 
